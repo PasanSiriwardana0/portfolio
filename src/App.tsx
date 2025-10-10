@@ -46,10 +46,10 @@ interface ExperienceItem {
 
 const projects: Project[] = [
   {
-    title: 'DeFi Yield Optimizer',
+    title: 'MediConnect Hub',
     description:
-      'A decentralized finance platform that auto-compounds yields across multiple liquidity pools.',
-    tags: ['Solidity', 'Ethereum', 'DeFi'],
+      'A web site can use doctors, phamasists and any medical users.',
+    tags: ['HTML', 'CSS', 'JavaScript', 'PHP', 'MySQL'],
     link: '#',
   },
   {
@@ -69,16 +69,14 @@ const projects: Project[] = [
 ];
 
 const skills: string[] = [
-  'Solidity',
-  'Ethereum',
-  'Smart Contracts',
-  'Web3.js / Ethers.js',
-  'Hardhat / Truffle',
-  'Polygon',
-  'IPFS',
-  'DeFi Protocols',
-  'Blockchain Security',
-  'Cryptography',
+  'HTML',
+  'CSS',
+  'PHP',
+  'MySQL',
+  'JavaScript',
+  'TypeScript',
+  'React',
+  'TailWind CSS',
 ];
 
 const experience: ExperienceItem[] = [
