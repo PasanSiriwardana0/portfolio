@@ -1231,6 +1231,69 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Terminal animations */
+        .terminal.minimized {
+            animation: minimizeTerminal 0.5s ease-out forwards;
+            height: 40px !important;
+        }
+
+        .terminal.maximized {
+            animation: maximizeTerminal 0.5s ease-out forwards;
+        }
+
+        @keyframes minimizeTerminal {
+            0% {
+                height: var(--terminal-height);
+                opacity: 1;
+            }
+            100% {
+                height: 40px;
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes maximizeTerminal {
+            0% {
+                height: 40px;
+                opacity: 0.9;
+            }
+            100% {
+                height: var(--terminal-height);
+                opacity: 1;
+            }
+        }
+
+        .terminal-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 0, 51, 0.2);
+            border: 1px solid rgba(255, 0, 51, 0.3);
+            color: var(--neon-red);
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .terminal-toggle:hover {
+            background: rgba(255, 0, 51, 0.3);
+            transform: scale(1.1);
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-right: 40px;
+        }
     </style>
 </head>
 <body>
@@ -1244,15 +1307,19 @@
     <div class="particles" id="particles"></div>
     
     <!-- Terminal (Hidden on Mobile/Tablet) -->
-    <div class="terminal" id="terminal">
-        <div class="terminal-header">SYSTEM TERMINAL</div>
+    <div class="terminal" id="terminal" style="display: none;">
+        <div class="terminal-header">
+            <span>SYSTEM TERMINAL</span>
+            <button class="terminal-toggle" id="terminal-toggle" aria-label="Toggle terminal size">
+                <i class="fas fa-window-minimize" id="terminal-toggle-icon"></i>
+            </button>
+        </div>
         <div class="terminal-content" id="terminal-content">
             <div class="terminal-line">Initializing portfolio system...</div>
             <div class="terminal-line">Loading user data...</div>
             <div class="terminal-line">Rendering UI components...</div>
             <div class="terminal-line">System ready.</div>
-            <div class="terminal-line">Custom cursor: ACTIVE</div>
-            <div class="terminal-line">Type help for commands</div>
+            <!-- <div class="terminal-line">Type 'help' for commands</div> -->
         </div>
     </div>
 
@@ -1379,7 +1446,7 @@
                         <!-- Functional Contact Form using Formspree -->
                         <form id="contactForm" action="https://formspree.io/f/meejkrkv" method="POST">
                             <input type="hidden" name="_subject" value="New Contact Form Submission from PST DEV Portfolio">
-                            <input type="hidden" name="_replyto" id="reply-to">
+                            <input type="hidden" name="_replyto" id="reply-to" value="pasansiriwardana3@gmail.com">
                             
                             <div class="form-group">
                                 <label for="name">Name *</label>
@@ -1484,22 +1551,22 @@
             ],
             "projects": [
                 {
-                    "title": "Neon Dashboard Interface",
-                    "description": "A futuristic admin dashboard with real-time analytics, customizable widgets, and dark mode UI. Built with React and Three.js for 3D visualizations.",
-                    "technologies": ["React", "Three.js", "Node.js", "WebGL"],
-                    "icon": "fas fa-chart-network"
+                    "title": "MediConnect Hub",
+                    "description": "A system can interact with doctors and patients and also there is seperate part of to blood donators and donors.",
+                    "technologies": ["HTML", "PHP", "JavaScript", "CSS", "MySQL"],
+                    "icon": "fa-solid fa-user-doctor"
                 },
                 {
-                    "title": "Quantum Encryption System",
-                    "description": "A next-generation encryption application using simulated quantum algorithms for ultra-secure communication protocols and data protection.",
-                    "technologies": ["Python", "Quantum Sim", "React", "WebAssembly"],
+                    "title": "Invetory Watchdog System",
+                    "description": "A System to monitor the inventory of players in game server and alert the admins real time.",
+                    "technologies": ["Python", "JavaScript", "HTML", "CSS", "PHP", "MySQL"],
                     "icon": "fas fa-lock"
                 },
                 {
-                    "title": "AR City Navigation",
-                    "description": "Augmented reality navigation system for urban environments with real-time pathfinding, points of interest, and social features.",
-                    "technologies": ["Unity", "C#", "ARCore", "Firebase"],
-                    "icon": "fas fa-map-marked-alt"
+                    "title": "Plant Disease Classifier",
+                    "description": "An AI System that can detect plants diseases from getting images by robot go plant by plant using machine learning algorithms and notify the farmer.",
+                    "technologies": ["Python", "HTML", "CSS", "Firebase", "JavaScript"],
+                    "icon": "fa-solid fa-leaf"
                 },
                 {
                     "title": "Blockchain Voting Platform",
@@ -1732,6 +1799,14 @@
             if (window.innerWidth >= 993) {
                 const terminal = document.getElementById('terminal');
                 const terminalContent = document.getElementById('terminal-content');
+                const terminalToggle = document.getElementById('terminal-toggle');
+                const terminalToggleIcon = document.getElementById('terminal-toggle-icon');
+                
+                // Set terminal height variable for animations
+                terminal.style.setProperty('--terminal-height', '250px');
+                
+                let terminalMinimized = false;
+                let autoMinimizeTimer = null;
                 
                 // Show terminal after delay
                 setTimeout(() => {
@@ -1739,20 +1814,80 @@
                         terminal.style.display = 'block';
                         addTerminalLine('Portfolio system initialized successfully.');
                         addTerminalLine('Responsive design: ACTIVE');
+                        // addTerminalLine('Auto-minimize in 10 seconds...');
+                        
+                        // Set up auto-minimize after 10 seconds
+                        autoMinimizeTimer = setTimeout(() => {
+                            minimizeTerminal();
+                            // addTerminalLine('Terminal auto-minimized. Click icon to restore.');
+                        }, 10000);
                     }
                 }, 2000);
                 
-                // Add click to minimize/maximize terminal
-                if (terminal) {
-                    terminal.addEventListener('click', function(e) {
-                        if (e.target.classList.contains('terminal-header')) {
-                            if (terminalContent.style.display === 'none') {
-                                terminalContent.style.display = 'block';
-                                terminal.style.height = 'auto';
-                            } else {
-                                terminalContent.style.display = 'none';
-                                terminal.style.height = '40px';
-                            }
+                // Terminal minimize/maximize functions
+                function minimizeTerminal() {
+                    if (terminalMinimized) return;
+                    
+                    terminal.classList.remove('maximized');
+                    terminal.classList.add('minimized');
+                    terminalContent.style.display = 'none';
+                    terminalToggleIcon.className = 'fas fa-window-maximize';
+                    terminalMinimized = true;
+                    
+                    // Clear auto-minimize timer if manually minimized
+                    if (autoMinimizeTimer) {
+                        clearTimeout(autoMinimizeTimer);
+                        autoMinimizeTimer = null;
+                    }
+                }
+                
+                function maximizeTerminal() {
+                    if (!terminalMinimized) return;
+                    
+                    terminal.classList.remove('minimized');
+                    terminal.classList.add('maximized');
+                    terminalContent.style.display = 'block';
+                    terminalToggleIcon.className = 'fas fa-window-minimize';
+                    terminalMinimized = false;
+                    
+                    // Reset auto-minimize timer
+                    if (autoMinimizeTimer) {
+                        clearTimeout(autoMinimizeTimer);
+                    }
+                    autoMinimizeTimer = setTimeout(() => {
+                        minimizeTerminal();
+                        // addTerminalLine('Terminal auto-minimized. Click icon to restore.');
+                    }, 10000);
+                }
+                
+                // Toggle button click handler
+                if (terminalToggle) {
+                    terminalToggle.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        
+                        if (terminalMinimized) {
+                            maximizeTerminal();
+                            // addTerminalLine('Terminal restored to full size.');
+                        } else {
+                            minimizeTerminal();
+                            // addTerminalLine('Terminal minimized.');
+                        }
+                    });
+                }
+                
+                // Header click handler to toggle terminal
+                const terminalHeader = document.querySelector('.terminal-header');
+                if (terminalHeader) {
+                    terminalHeader.addEventListener('click', function(e) {
+                        // Don't toggle if clicking the toggle button
+                        if (e.target.classList.contains('terminal-toggle') || 
+                            e.target.closest('.terminal-toggle')) {
+                            return;
+                        }
+                        
+                        if (terminalMinimized) {
+                            maximizeTerminal();
+                            // addTerminalLine('Terminal restored to full size.');
                         }
                     });
                 }
@@ -1893,6 +2028,10 @@
                 terminal.style.display = 'none';
             } else if (window.innerWidth > 992 && terminal) {
                 terminal.style.display = 'block';
+                // Reset terminal state on resize
+                if (terminalMinimized !== undefined) {
+                    maximizeTerminal();
+                }
             }
             
             // Hide cursor on mobile
@@ -1905,8 +2044,6 @@
         // Console help command (for desktop debugging)
         if (window.innerWidth >= 769) {
             console.log('%c=== PST DEV Portfolio System ===', 'color: #ff0033; font-size: 16px; font-weight: bold;');
-            console.log('%cResponsive Design: ACTIVE', 'color: #0f0;');
-            console.log('%cContact Form: FUNCTIONAL (Formspree)', 'color: #0f0;');
         }
     </script>
 </body>
