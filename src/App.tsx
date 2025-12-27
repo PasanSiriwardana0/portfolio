@@ -18,7 +18,7 @@ import { useEffect, useState, createContext, useContext, type ReactNode } from '
 import cvPdf from '@/assets/downloads/cv.pdf';
 
 // Theme persistence helpers (cookies)
-type ThemeCookie = 'light' | 'dark' | 'system';
+type ThemeCookie = 'light' | 'dark';
 function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : null;
