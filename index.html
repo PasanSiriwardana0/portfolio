@@ -1582,12 +1582,6 @@
                 <p class="footer-text">Future-ready development solutions</p>
             </div>
         </div>
-        <!-- Add to footer -->
-        <div style="text-align: center; margin-top: 20px; opacity: 0.3; font-size: 0.8rem;">
-            <a href="view_visits.php" style="color: #666; text-decoration: none;">
-                <i class="fas fa-chart-bar"></i> View Analytics
-            </a>
-        </div>
     </footer>
 
     <!-- Configuration Data -->
@@ -2217,48 +2211,6 @@
             console.log('%c=== PST DEV Portfolio System ===', 'color: #ff0033; font-size: 16px; font-weight: bold;');
             console.log('%cNow with Packages Section!', 'color: #ff3366; font-size: 14px;');
         }
-    </script>
-
-    <script>
-        // JavaScript Visit Tracking System
-        document.addEventListener('DOMContentLoaded', function() {
-            // Only track if not already tracked in this browser session
-            if (!sessionStorage.getItem('visit_logged')) {
-                // Create visits.json if it doesn't exist
-                if (!localStorage.getItem('visits')) {
-                    localStorage.setItem('visits', '[]');
-                }
-                
-                // Get existing visits
-                let visits = JSON.parse(localStorage.getItem('visits') || '[]');
-                
-                // Collect visitor data
-                const visitData = {
-                    timestamp: new Date().toISOString(),
-                    ip: 'Unknown (JS)', // JavaScript can't get real IP
-                    user_agent: navigator.userAgent,
-                    referrer: document.referrer || 'Direct',
-                    page: window.location.pathname.split('/').pop(),
-                    session_id: 'js_' + Math.random().toString(36).substr(2, 9)
-                };
-                
-                // Add to visits array
-                visits.push(visitData);
-                
-                // Keep only last 1000 visits
-                if (visits.length > 1000) {
-                    visits = visits.slice(-1000);
-                }
-                
-                // Save to localStorage
-                localStorage.setItem('visits', JSON.stringify(visits));
-                
-                // Mark as visited in session
-                sessionStorage.setItem('visit_logged', 'true');
-                
-                console.log('Visit logged:', visitData.timestamp);
-            }
-        });
     </script>
 </body>
 </html>
