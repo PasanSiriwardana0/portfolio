@@ -1,0 +1,556 @@
+<?php
+$visitsFile = 'visits.json';
+
+// Read visits data
+$visits = [];
+if (file_exists($visitsFile)) {
+    $visits = json_decode(file_get_contents($visitsFile), true);
+    if (!is_array($visits)) {
+        $visits = [];
+    }
+}
+
+// Reverse array to show newest first
+$visits = array_reverse($visits);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PST DEV | Visit Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-black: #000000;
+            --accent-red: #ff0000;
+            --dark-red: #ae0000;
+            --neon-red: #ff0033;
+            --light-gray: #f5f5f5;
+            --medium-gray: #888;
+            --dark-gray: #111;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: rgba(0, 0, 0, 0.3);
+            --cyber-glow: rgba(255, 0, 51, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--primary-black);
+            color: white;
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 0, 51, 0.03) 0%, transparent 25%),
+                radial-gradient(circle at 90% 80%, rgba(174, 0, 0, 0.03) 0%, transparent 25%),
+                linear-gradient(to bottom, #000, #0a0a0a);
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 100px 20px 50px;
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            margin-bottom: 40px;
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(90deg, white 0%, var(--accent-red) 50%, white 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(255, 0, 51, 0.3);
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 40px var(--glass-shadow);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--neon-red);
+            box-shadow: 0 20px 50px rgba(255, 0, 51, 0.2);
+        }
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 900;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-red);
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 0, 51, 0.5);
+        }
+
+        .stat-label {
+            color: #ccc;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .visits-table-container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            margin-top: 30px;
+            box-shadow: 0 10px 40px var(--glass-shadow);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: rgba(255, 0, 51, 0.1);
+            padding: 20px;
+            text-align: left;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--neon-red);
+            color: var(--neon-red);
+            font-size: 1.1rem;
+        }
+
+        td {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #ccc;
+        }
+
+        tr:hover {
+            background: rgba(255, 0, 51, 0.05);
+        }
+
+        .timestamp {
+            color: #0af;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .user-agent {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .referrer {
+            color: #0f0;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ip-address {
+            font-family: 'Courier New', monospace;
+            color: #ff6;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 30px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            border: none;
+            outline: none;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, var(--accent-red), var(--dark-red));
+            color: white;
+            box-shadow: 0 0 20px rgba(255, 0, 51, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 0, 51, 0.6);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: white;
+            border: 2px solid var(--neon-red);
+            box-shadow: 0 0 15px rgba(255, 0, 51, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 0, 51, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(255, 0, 51, 0.4);
+        }
+
+        .search-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 0, 51, 0.3);
+            border-radius: 6px;
+            padding: 14px 20px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            width: 300px;
+            max-width: 100%;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--neon-red);
+            box-shadow: 0 0 10px rgba(255, 0, 51, 0.3);
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #888;
+            font-size: 1.2rem;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #777;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .page-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 0, 51, 0.3);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-btn:hover {
+            background: rgba(255, 0, 51, 0.2);
+            transform: scale(1.1);
+        }
+
+        .page-btn.active {
+            background: var(--neon-red);
+            box-shadow: 0 0 15px rgba(255, 0, 51, 0.5);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 80px 15px 30px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            th, td {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .user-agent, .referrer {
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-chart-line"></i> VISIT ANALYTICS</h1>
+        
+        <div class="controls">
+            <div>
+                <a href="../" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Portfolio
+                </a>
+                <a href="?export=csv" class="btn btn-secondary">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+            
+            <input type="text" 
+                   class="search-box" 
+                   placeholder="Search visits..." 
+                   id="searchInput"
+                   onkeyup="filterTable()">
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number"><?php echo count($visits); ?></div>
+                <div class="stat-label">Total Visits</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">
+                    <?php 
+                    $uniqueIPs = array_unique(array_column($visits, 'ip'));
+                    echo count($uniqueIPs);
+                    ?>
+                </div>
+                <div class="stat-label">Unique Visitors</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">
+                    <?php
+                    $today = date('Y-m-d');
+                    $todayVisits = array_filter($visits, function($visit) use ($today) {
+                        return strpos($visit['timestamp'], $today) === 0;
+                    });
+                    echo count($todayVisits);
+                    ?>
+                </div>
+                <div class="stat-label">Today's Visits</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">
+                    <?php
+                    $referrerVisits = array_filter($visits, function($visit) {
+                        return $visit['referrer'] !== 'Direct';
+                    });
+                    echo count($referrerVisits);
+                    ?>
+                </div>
+                <div class="stat-label">From Referrers</div>
+            </div>
+        </div>
+        
+        <div class="visits-table-container">
+            <?php if (empty($visits)): ?>
+                <div class="no-data">
+                    <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; color: #444;"></i>
+                    <p>No visit data available yet.</p>
+                    <p>Visit data will appear here once visitors come to your portfolio.</p>
+                </div>
+            <?php else: ?>
+                <table id="visitsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Timestamp</th>
+                            <th>IP Address</th>
+                            <th>User Agent</th>
+                            <th>Referrer</th>
+                            <th>Session</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($visits as $index => $visit): ?>
+                            <tr>
+                                <td><?php echo $index + 1; ?></td>
+                                <td class="timestamp"><?php echo htmlspecialchars($visit['timestamp']); ?></td>
+                                <td class="ip-address"><?php echo htmlspecialchars($visit['ip']); ?></td>
+                                <td class="user-agent" title="<?php echo htmlspecialchars($visit['user_agent']); ?>">
+                                    <?php echo htmlspecialchars(substr($visit['user_agent'], 0, 50) . (strlen($visit['user_agent']) > 50 ? '...' : '')); ?>
+                                </td>
+                                <td class="referrer" title="<?php echo htmlspecialchars($visit['referrer']); ?>">
+                                    <?php echo htmlspecialchars(substr($visit['referrer'], 0, 30) . (strlen($visit['referrer']) > 30 ? '...' : '')); ?>
+                                </td>
+                                <td><?php echo substr($visit['session_id'], 0, 8) . '...'; ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                
+                <div class="pagination" id="pagination"></div>
+            <?php endif; ?>
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 PST DEV Visit Analytics | Last updated: <?php echo date('Y-m-d H:i:s'); ?></p>
+            <p>Data is stored locally and automatically managed (keeps last 1000 visits)</p>
+        </div>
+    </div>
+
+    <script>
+        // Search/filter functionality
+        function filterTable() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('visitsTable');
+            const tr = table.getElementsByTagName('tr');
+            
+            for (let i = 1; i < tr.length; i++) {
+                let found = false;
+                const td = tr[i].getElementsByTagName('td');
+                
+                for (let j = 0; j < td.length; j++) {
+                    if (td[j]) {
+                        const textValue = td[j].textContent || td[j].innerText;
+                        if (textValue.toLowerCase().indexOf(filter) > -1) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (found) {
+                    tr[i].style.display = '';
+                } else {
+                    tr[i].style.display = 'none';
+                }
+            }
+        }
+        
+        // Pagination
+        const rowsPerPage = 20;
+        let currentPage = 1;
+        
+        function setupPagination() {
+            const table = document.getElementById('visitsTable');
+            if (!table) return;
+            
+            const rows = table.tBodies[0].rows;
+            const pageCount = Math.ceil(rows.length / rowsPerPage);
+            const pagination = document.getElementById('pagination');
+            
+            if (pageCount <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+            
+            pagination.innerHTML = '';
+            
+            // Previous button
+            const prevBtn = document.createElement('div');
+            prevBtn.className = 'page-btn';
+            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+            prevBtn.onclick = () => changePage(currentPage - 1);
+            pagination.appendChild(prevBtn);
+            
+            // Page buttons
+            for (let i = 1; i <= pageCount; i++) {
+                const pageBtn = document.createElement('div');
+                pageBtn.className = 'page-btn';
+                if (i === 1) pageBtn.classList.add('active');
+                pageBtn.textContent = i;
+                pageBtn.onclick = () => changePage(i);
+                pagination.appendChild(pageBtn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('div');
+            nextBtn.className = 'page-btn';
+            nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            nextBtn.onclick = () => changePage(currentPage + 1);
+            pagination.appendChild(nextBtn);
+            
+            showPage(1);
+        }
+        
+        function changePage(page) {
+            const table = document.getElementById('visitsTable');
+            if (!table) return;
+            
+            const rows = table.tBodies[0].rows;
+            const pageCount = Math.ceil(rows.length / rowsPerPage);
+            
+            if (page < 1 || page > pageCount) return;
+            
+            currentPage = page;
+            showPage(page);
+            updatePaginationButtons();
+        }
+        
+        function showPage(page) {
+            const table = document.getElementById('visitsTable');
+            if (!table) return;
+            
+            const rows = table.tBodies[0].rows;
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = i >= start && i < end ? '' : 'none';
+            }
+        }
+        
+        function updatePaginationButtons() {
+            const pageBtns = document.querySelectorAll('#pagination .page-btn');
+            pageBtns.forEach((btn, index) => {
+                if (index > 0 && index < pageBtns.length - 1) {
+                    const pageNum = parseInt(btn.textContent);
+                    btn.classList.toggle('active', pageNum === currentPage);
+                }
+            });
+        }
+        
+        // Initialize pagination
+        document.addEventListener('DOMContentLoaded', function() {
+            setupPagination();
+        });
+        
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+    </script>
+</body>
+</html>

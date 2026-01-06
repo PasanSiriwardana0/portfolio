@@ -1,3 +1,46 @@
+<?php
+// Visit tracking system
+$visitsFile = 'code69analyze/visits/visits.json';
+
+// Ensure directory exists
+if (!file_exists(dirname($visitsFile))) {
+    mkdir(dirname($visitsFile), 0777, true);
+}
+
+// Read existing visits
+$visits = [];
+if (file_exists($visitsFile)) {
+    $visits = json_decode(file_get_contents($visitsFile), true);
+    if (!is_array($visits)) {
+        $visits = [];
+    }
+}
+
+// Collect visitor data
+$visitData = [
+    'timestamp' => date('Y-m-d H:i:s'),
+    'ip' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
+    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',
+    'referrer' => $_SERVER['HTTP_REFERER'] ?? 'Direct',
+    'page' => basename($_SERVER['PHP_SELF']),
+    'session_id' => session_id() ?? bin2hex(random_bytes(8))
+];
+
+// Add to visits array
+$visits[] = $visitData;
+
+// Keep only last 1000 visits
+if (count($visits) > 1000) {
+    $visits = array_slice($visits, -1000);
+}
+
+// Save to file
+file_put_contents($visitsFile, json_encode($visits, JSON_PRETTY_PRINT));
+
+// Set as visited in session to prevent multiple logs per session
+session_start();
+$_SESSION['visit_logged'] = true;
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1581,6 +1624,12 @@
                 <p class="footer-text">© 2026 PST DEV. All rights reserved.</p>
                 <p class="footer-text">Future-ready development solutions</p>
             </div>
+        </div>
+        <!-- Add to footer -->
+        <div style="text-align: center; margin-top: 20px; opacity: 0.3; font-size: 0.8rem;">
+            <a href="code69analyze/visits/view_visits.php" style="color: #666; text-decoration: none;">
+                <i class="fas fa-chart-bar"></i> View Analytics
+            </a>
         </div>
     </footer>
 
