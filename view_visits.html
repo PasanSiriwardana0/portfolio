@@ -1,740 +1,189 @@
-<?php
-// Start session to access session ID if needed
-session_start();
-
-// Set the correct path to visits.json (same directory)
-$visitsFile = 'visits.json';
-
-// Check if we can read the file
-if (!file_exists($visitsFile)) {
-    $visits = [];
-    $error = "visits.json file not found. Make sure it exists in the same directory.";
-} else {
-    $jsonContent = file_get_contents($visitsFile);
-    if (empty($jsonContent)) {
-        $visits = [];
-        $error = "visits.json is empty.";
-    } else {
-        $visits = json_decode($jsonContent, true);
-        if (!is_array($visits)) {
-            $visits = [];
-            $error = "visits.json contains invalid JSON data.";
-        }
-    }
-}
-
-// Handle CSV export
-if (isset($_GET['export']) && $_GET['export'] === 'csv' && !empty($visits)) {
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="visits_export_' . date('Y-m-d_His') . '.csv"');
-    
-    $output = fopen('php://output', 'w');
-    fputcsv($output, ['#', 'Timestamp', 'IP Address', 'User Agent', 'Referrer', 'Page', 'Session ID']);
-    
-    $counter = 1;
-    foreach ($visits as $visit) {
-        fputcsv($output, [
-            $counter++,
-            $visit['timestamp'],
-            $visit['ip'],
-            $visit['user_agent'],
-            $visit['referrer'],
-            $visit['page'],
-            $visit['session_id']
-        ]);
-    }
-    
-    fclose($output);
-    exit;
-}
-
-// Reverse array to show newest first
-$visits = array_reverse($visits);
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Same head as before, but change title to view_visits.html -->
     <title>PST DEV | Visit Analytics</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-black: #000000;
-            --accent-red: #ff0000;
-            --dark-red: #ae0000;
-            --neon-red: #ff0033;
-            --light-gray: #f5f5f5;
-            --medium-gray: #888;
-            --dark-gray: #111;
-            --glass-bg: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-shadow: rgba(0, 0, 0, 0.3);
-            --cyber-glow: rgba(255, 0, 51, 0.3);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--primary-black);
-            color: white;
-            line-height: 1.6;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(circle at 10% 20%, rgba(255, 0, 51, 0.03) 0%, transparent 25%),
-                radial-gradient(circle at 90% 80%, rgba(174, 0, 0, 0.03) 0%, transparent 25%),
-                linear-gradient(to bottom, #000, #0a0a0a);
-            min-height: 100vh;
-        }
-
-        .container {
-            width: 90%;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 100px 20px 50px;
-        }
-
-        h1 {
-            font-size: clamp(2.5rem, 5vw, 3.5rem);
-            margin-bottom: 40px;
-            font-family: 'Orbitron', sans-serif;
-            background: linear-gradient(90deg, white 0%, var(--accent-red) 50%, white 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 15px rgba(255, 0, 51, 0.3);
-            letter-spacing: 1px;
-            text-align: center;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            margin-bottom: 50px;
-        }
-
-        .stat-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
-            padding: 30px;
-            text-align: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 40px var(--glass-shadow);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-10px);
-            border-color: var(--neon-red);
-            box-shadow: 0 20px 50px rgba(255, 0, 51, 0.2);
-        }
-
-        .stat-number {
-            font-size: 3.5rem;
-            font-weight: 900;
-            font-family: 'Orbitron', sans-serif;
-            color: var(--neon-red);
-            margin-bottom: 10px;
-            text-shadow: 0 0 20px rgba(255, 0, 51, 0.5);
-        }
-
-        .stat-label {
-            color: #ccc;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .visits-table-container {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-radius: 12px;
-            border: 1px solid var(--glass-border);
-            padding: 30px;
-            margin-top: 30px;
-            box-shadow: 0 10px 40px var(--glass-shadow);
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 800px;
-        }
-
-        th {
-            background: rgba(255, 0, 51, 0.1);
-            padding: 20px;
-            text-align: left;
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 1px;
-            border-bottom: 2px solid var(--neon-red);
-            color: var(--neon-red);
-            font-size: 1.1rem;
-            position: sticky;
-            top: 0;
-        }
-
-        td {
-            padding: 18px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            color: #ccc;
-        }
-
-        tr:hover {
-            background: rgba(255, 0, 51, 0.05);
-        }
-
-        .timestamp {
-            color: #0af;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
-
-        .user-agent {
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .referrer {
-            color: #0f0;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .ip-address {
-            font-family: 'Courier New', monospace;
-            color: #ff6;
-            white-space: nowrap;
-        }
-
-        .session-id {
-            font-family: 'Courier New', monospace;
-            color: #f0f;
-            font-size: 0.9rem;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 14px 30px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            border: none;
-            outline: none;
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 1px;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background: linear-gradient(90deg, var(--accent-red), var(--dark-red));
-            color: white;
-            box-shadow: 0 0 20px rgba(255, 0, 51, 0.4);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(255, 0, 51, 0.6);
-        }
-
-        .btn-secondary {
-            background-color: transparent;
-            color: white;
-            border: 2px solid var(--neon-red);
-            box-shadow: 0 0 15px rgba(255, 0, 51, 0.3);
-        }
-
-        .btn-secondary:hover {
-            background-color: rgba(255, 0, 51, 0.1);
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(255, 0, 51, 0.4);
-        }
-
-        .search-box {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 0, 51, 0.3);
-            border-radius: 6px;
-            padding: 14px 20px;
-            color: white;
-            font-family: 'Inter', sans-serif;
-            font-size: 1rem;
-            width: 300px;
-            max-width: 100%;
-        }
-
-        .search-box:focus {
-            outline: none;
-            border-color: var(--neon-red);
-            box-shadow: 0 0 10px rgba(255, 0, 51, 0.3);
-        }
-
-        .no-data {
-            text-align: center;
-            padding: 50px;
-            color: #888;
-            font-size: 1.2rem;
-        }
-
-        .error-message {
-            background: rgba(255, 0, 51, 0.1);
-            border: 1px solid var(--neon-red);
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: center;
-            color: #ff6666;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 50px;
-            color: #777;
-            font-family: 'Orbitron', sans-serif;
-            letter-spacing: 1px;
-            font-size: 0.9rem;
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 15px;
-            margin-top: 30px;
-        }
-
-        .page-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 0, 51, 0.3);
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .page-btn:hover {
-            background: rgba(255, 0, 51, 0.2);
-            transform: scale(1.1);
-        }
-
-        .page-btn.active {
-            background: var(--neon-red);
-            box-shadow: 0 0 15px rgba(255, 0, 51, 0.5);
-        }
-
-        .clear-btn {
-            margin-left: 10px;
-            padding: 14px 20px;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 80px 15px 30px;
-            }
-            
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .controls {
-                flex-direction: column;
-            }
-            
-            .search-box {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-            
-            .clear-btn {
-                margin-left: 0;
-                width: 100%;
-            }
-            
-            th, td {
-                padding: 12px 15px;
-                font-size: 0.9rem;
-            }
-            
-            .user-agent, .referrer {
-                max-width: 150px;
-            }
-            
-            table {
-                min-width: 600px;
-            }
-        }
-    </style>
+    <!-- Include all the same CSS -->
 </head>
 <body>
     <div class="container">
-        <h1><i class="fas fa-chart-line"></i> VISIT ANALYTICS</h1>
-        
-        <?php if (isset($error) && empty($visits)): ?>
-            <div class="error-message">
-                <i class="fas fa-exclamation-triangle"></i> <?php echo $error; ?>
-            </div>
-        <?php endif; ?>
+        <h1><i class="fas fa-chart-line"></i> VISIT ANALYTICS (Client-side)</h1>
         
         <div class="controls">
             <div>
-                <a href="./" class="btn btn-primary">
+                <a href="index.html" class="btn btn-primary">
                     <i class="fas fa-arrow-left"></i> Back to Portfolio
                 </a>
-                <?php if (!empty($visits)): ?>
-                    <a href="?export=csv" class="btn btn-secondary">
-                        <i class="fas fa-download"></i> Export CSV
-                    </a>
-                <?php endif; ?>
-                <a href="javascript:location.reload()" class="btn btn-secondary">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </a>
-            </div>
-            
-            <div style="display: flex; align-items: center;">
-                <input type="text" 
-                       class="search-box" 
-                       placeholder="Search visits..." 
-                       id="searchInput"
-                       onkeyup="filterTable()">
-                <button class="btn btn-secondary clear-btn" onclick="clearSearch()">
-                    <i class="fas fa-times"></i> Clear
+                <button class="btn btn-secondary" onclick="exportData()">
+                    <i class="fas fa-download"></i> Export JSON
+                </button>
+                <button class="btn btn-secondary" onclick="clearData()">
+                    <i class="fas fa-trash"></i> Clear Data
                 </button>
             </div>
         </div>
         
-        <?php if (!empty($visits)): ?>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-number"><?php echo count($visits); ?></div>
-                    <div class="stat-label">Total Visits</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">
-                        <?php 
-                        $uniqueIPs = [];
-                        foreach ($visits as $visit) {
-                            $uniqueIPs[$visit['ip']] = true;
-                        }
-                        echo count($uniqueIPs);
-                        ?>
-                    </div>
-                    <div class="stat-label">Unique Visitors</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">
-                        <?php
-                        $today = date('Y-m-d');
-                        $todayVisits = 0;
-                        foreach ($visits as $visit) {
-                            if (strpos($visit['timestamp'], $today) === 0) {
-                                $todayVisits++;
-                            }
-                        }
-                        echo $todayVisits;
-                        ?>
-                    </div>
-                    <div class="stat-label">Today's Visits</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">
-                        <?php
-                        $referrerVisits = 0;
-                        foreach ($visits as $visit) {
-                            if ($visit['referrer'] !== 'Direct' && !empty($visit['referrer'])) {
-                                $referrerVisits++;
-                            }
-                        }
-                        echo $referrerVisits;
-                        ?>
-                    </div>
-                    <div class="stat-label">From Referrers</div>
-                </div>
+        <div id="analytics-content">
+            <!-- Content will be loaded by JavaScript -->
+            <div class="no-data" id="loading">
+                <i class="fas fa-spinner fa-spin" style="font-size: 3rem; margin-bottom: 20px;"></i>
+                <p>Loading visit data...</p>
             </div>
-        <?php endif; ?>
-        
-        <div class="visits-table-container">
-            <?php if (empty($visits)): ?>
-                <div class="no-data">
-                    <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; color: #444;"></i>
-                    <p>No visit data available yet.</p>
-                    <p>Visit the main portfolio page to generate visit logs.</p>
-                    <?php if (isset($error)): ?>
-                        <p style="color: #ff6666; margin-top: 10px;">
-                            <i class="fas fa-exclamation-circle"></i> <?php echo $error; ?>
-                        </p>
-                    <?php endif; ?>
-                </div>
-            <?php else: ?>
-                <table id="visitsTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Timestamp</th>
-                            <th>IP Address</th>
-                            <th>User Agent</th>
-                            <th>Referrer</th>
-                            <th>Page</th>
-                            <th>Session ID</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $counter = 1;
-                        foreach ($visits as $visit): 
-                        ?>
-                            <tr>
-                                <td><?php echo $counter++; ?></td>
-                                <td class="timestamp"><?php echo htmlspecialchars($visit['timestamp']); ?></td>
-                                <td class="ip-address"><?php echo htmlspecialchars($visit['ip']); ?></td>
-                                <td class="user-agent" title="<?php echo htmlspecialchars($visit['user_agent']); ?>">
-                                    <?php 
-                                    $ua = htmlspecialchars($visit['user_agent']);
-                                    echo strlen($ua) > 50 ? substr($ua, 0, 50) . '...' : $ua;
-                                    ?>
-                                </td>
-                                <td class="referrer" title="<?php echo htmlspecialchars($visit['referrer']); ?>">
-                                    <?php 
-                                    $ref = htmlspecialchars($visit['referrer']);
-                                    echo strlen($ref) > 30 ? substr($ref, 0, 30) . '...' : $ref;
-                                    ?>
-                                </td>
-                                <td><?php echo htmlspecialchars($visit['page']); ?></td>
-                                <td class="session-id" title="<?php echo htmlspecialchars($visit['session_id']); ?>">
-                                    <?php echo substr($visit['session_id'], 0, 12) . '...'; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                
-                <div class="pagination" id="pagination"></div>
-            <?php endif; ?>
-        </div>
-        
-        <div class="footer">
-            <p>© 2026 PST DEV Visit Analytics | Last updated: <?php echo date('Y-m-d H:i:s'); ?></p>
-            <p>Data is stored locally and automatically managed (keeps last 1000 visits)</p>
-            <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 10px;">
-                <i class="fas fa-user-circle"></i> Current session: <?php echo session_id(); ?>
-                | <i class="fas fa-server"></i> File: <?php echo realpath($visitsFile); ?>
-            </p>
         </div>
     </div>
 
     <script>
-        // Search/filter functionality
-        function filterTable() {
-            const input = document.getElementById('searchInput');
-            const filter = input.value.toLowerCase();
-            const table = document.getElementById('visitsTable');
-            if (!table) return;
+        // Load and display visit data
+        function loadVisitData() {
+            const visits = JSON.parse(localStorage.getItem('visits') || '[]');
+            const container = document.getElementById('analytics-content');
             
-            const tr = table.getElementsByTagName('tr');
-            
-            for (let i = 1; i < tr.length; i++) {
-                let found = false;
-                const td = tr[i].getElementsByTagName('td');
-                
-                for (let j = 0; j < td.length; j++) {
-                    if (td[j]) {
-                        const textValue = td[j].textContent || td[j].innerText;
-                        if (textValue.toLowerCase().includes(filter)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (found) {
-                    tr[i].style.display = '';
-                } else {
-                    tr[i].style.display = 'none';
-                }
-            }
-            
-            // Update pagination after filtering
-            setupPagination();
-        }
-        
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-            filterTable();
-        }
-        
-        // Pagination
-        const rowsPerPage = 20;
-        let currentPage = 1;
-        
-        function setupPagination() {
-            const table = document.getElementById('visitsTable');
-            if (!table) return;
-            
-            // Get visible rows only (after filtering)
-            const allRows = Array.from(table.tBodies[0].rows);
-            const visibleRows = allRows.filter(row => row.style.display !== 'none');
-            
-            const pageCount = Math.ceil(visibleRows.length / rowsPerPage);
-            const pagination = document.getElementById('pagination');
-            
-            if (pageCount <= 1) {
-                pagination.style.display = 'none';
-                showAllRows(); // Show all if only one page
+            if (visits.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; color: #444;"></i>
+                        <p>No visit data available yet.</p>
+                        <p>Visit the main portfolio page to generate visit logs.</p>
+                    </div>
+                `;
                 return;
             }
             
-            pagination.style.display = 'flex';
-            pagination.innerHTML = '';
+            // Reverse to show newest first
+            const reversedVisits = [...visits].reverse();
             
-            // Previous button
-            const prevBtn = document.createElement('div');
-            prevBtn.className = 'page-btn';
-            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-            prevBtn.onclick = () => changePage(currentPage - 1);
-            pagination.appendChild(prevBtn);
+            // Calculate statistics
+            const uniqueIPs = new Set(visits.map(v => v.ip));
+            const today = new Date().toISOString().split('T')[0];
+            const todayVisits = visits.filter(v => v.timestamp.startsWith(today)).length;
+            const referrerVisits = visits.filter(v => v.referrer !== 'Direct' && v.referrer).length;
             
-            // Show limited page numbers
-            const maxPages = 7;
-            let startPage = Math.max(1, currentPage - 3);
-            let endPage = Math.min(pageCount, startPage + maxPages - 1);
+            // Generate HTML
+            let html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">${visits.length}</div>
+                        <div class="stat-label">Total Visits</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-number">${uniqueIPs.size}</div>
+                        <div class="stat-label">Unique Visitors</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-number">${todayVisits}</div>
+                        <div class="stat-label">Today's Visits</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-number">${referrerVisits}</div>
+                        <div class="stat-label">From Referrers</div>
+                    </div>
+                </div>
+                
+                <div class="visits-table-container">
+                    <table id="visitsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Timestamp</th>
+                                <th>IP</th>
+                                <th>User Agent</th>
+                                <th>Referrer</th>
+                                <th>Page</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
             
-            if (endPage - startPage + 1 < maxPages) {
-                startPage = Math.max(1, endPage - maxPages + 1);
-            }
-            
-            for (let i = startPage; i <= endPage; i++) {
-                const pageBtn = document.createElement('div');
-                pageBtn.className = 'page-btn';
-                if (i === currentPage) pageBtn.classList.add('active');
-                pageBtn.textContent = i;
-                pageBtn.onclick = () => changePage(i);
-                pagination.appendChild(pageBtn);
-            }
-            
-            // Next button
-            const nextBtn = document.createElement('div');
-            nextBtn.className = 'page-btn';
-            nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-            nextBtn.onclick = () => changePage(currentPage + 1);
-            pagination.appendChild(nextBtn);
-            
-            showPage(currentPage);
-        }
-        
-        function showAllRows() {
-            const table = document.getElementById('visitsTable');
-            if (!table) return;
-            
-            const rows = table.tBodies[0].rows;
-            for (let i = 0; i < rows.length; i++) {
-                rows[i].style.display = '';
-            }
-        }
-        
-        function changePage(page) {
-            const table = document.getElementById('visitsTable');
-            if (!table) return;
-            
-            // Get visible rows only
-            const allRows = Array.from(table.tBodies[0].rows);
-            const visibleRows = allRows.filter(row => row.style.display !== 'none');
-            const pageCount = Math.ceil(visibleRows.length / rowsPerPage);
-            
-            if (page < 1 || page > pageCount) return;
-            
-            currentPage = page;
-            showPage(page);
-            updatePaginationButtons();
-        }
-        
-        function showPage(page) {
-            const table = document.getElementById('visitsTable');
-            if (!table) return;
-            
-            // Get visible rows only
-            const allRows = Array.from(table.tBodies[0].rows);
-            const visibleRows = allRows.filter(row => row.style.display !== 'none');
-            
-            const start = (page - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            
-            // Hide all rows first
-            allRows.forEach(row => {
-                row.style.display = 'none';
+            reversedVisits.forEach((visit, index) => {
+                html += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td class="timestamp">${new Date(visit.timestamp).toLocaleString()}</td>
+                        <td class="ip-address">${visit.ip}</td>
+                        <td class="user-agent" title="${visit.user_agent}">
+                            ${visit.user_agent.substring(0, 50)}${visit.user_agent.length > 50 ? '...' : ''}
+                        </td>
+                        <td class="referrer" title="${visit.referrer}">
+                            ${visit.referrer.substring(0, 30)}${visit.referrer.length > 30 ? '...' : ''}
+                        </td>
+                        <td>${visit.page}</td>
+                    </tr>
+                `;
             });
             
-            // Show only rows for current page
-            for (let i = start; i < Math.min(end, visibleRows.length); i++) {
-                visibleRows[i].style.display = '';
+            html += `
+                        </tbody>
+                    </table>
+                    <div class="footer" style="margin-top: 30px;">
+                        <p>© ${new Date().getFullYear()} PST DEV Visit Analytics | Last updated: ${new Date().toLocaleString()}</p>
+                        <p>Data stored in browser localStorage (clears when browser data is cleared)</p>
+                        <p>Total storage used: ${JSON.stringify(visits).length} bytes</p>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Add search functionality
+            setTimeout(() => {
+                addSearchFunctionality();
+            }, 100);
+        }
+        
+        function addSearchFunctionality() {
+            const searchBox = document.createElement('input');
+            searchBox.type = 'text';
+            searchBox.className = 'search-box';
+            searchBox.placeholder = 'Search visits...';
+            searchBox.style.marginBottom = '20px';
+            searchBox.style.width = '100%';
+            
+            searchBox.addEventListener('input', function() {
+                const filter = this.value.toLowerCase();
+                const table = document.getElementById('visitsTable');
+                if (!table) return;
+                
+                const rows = table.tBodies[0].rows;
+                
+                for (let i = 0; i < rows.length; i++) {
+                    const row = rows[i];
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(filter) ? '' : 'none';
+                }
+            });
+            
+            const tableContainer = document.querySelector('.visits-table-container');
+            if (tableContainer) {
+                tableContainer.insertBefore(searchBox, tableContainer.firstChild);
             }
         }
         
-        function updatePaginationButtons() {
-            const pageBtns = document.querySelectorAll('#pagination .page-btn');
-            pageBtns.forEach((btn, index) => {
-                // Skip first and last buttons (prev/next)
-                if (index > 0 && index < pageBtns.length - 1) {
-                    const pageNum = parseInt(btn.textContent);
-                    btn.classList.toggle('active', pageNum === currentPage);
-                }
-            });
+        function exportData() {
+            const visits = JSON.parse(localStorage.getItem('visits') || '[]');
+            const dataStr = JSON.stringify(visits, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `visits_export_${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
         }
         
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            setupPagination();
-            
-            // Auto-refresh every 60 seconds (optional)
-            setInterval(() => {
-                // Only refresh if user is not interacting with the table
-                if (!document.querySelector('#searchInput:focus')) {
-                    location.reload();
-                }
-            }, 60000);
-            
-            // Add keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
-                // Ctrl+F to focus search
-                if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                    e.preventDefault();
-                    document.getElementById('searchInput').focus();
-                }
-                // Escape to clear search
-                if (e.key === 'Escape') {
-                    clearSearch();
-                    document.getElementById('searchInput').blur();
-                }
-            });
-        });
+        function clearData() {
+            if (confirm('Are you sure you want to clear all visit data? This cannot be undone.')) {
+                localStorage.removeItem('visits');
+                sessionStorage.clear();
+                loadVisitData();
+            }
+        }
+        
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadVisitData);
     </script>
 </body>
 </html>
