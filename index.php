@@ -1,3 +1,15 @@
+<?php
+// Start session if not started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Include configuration
+require_once 'config.php';
+
+// Log this visit
+logVisit($conn);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1379,6 +1391,15 @@
     </style>
 </head>
 <body>
+    <!-- visit counter -->
+    <div class="visit-counter" style="display: none;">
+        <?php
+        $total_visits = getTotalVisits($conn);
+        $today_visits = getTodayVisits($conn);
+        echo "Total: $total_visits | Today: $today_visits";
+        ?>
+    </div>
+
     <!-- Custom Cursor (Desktop Only) -->
     <div class="cursor-dot" data-cursor-dot></div>
     <div class="cursor-outline" data-cursor-outline></div>
@@ -2212,5 +2233,27 @@
             console.log('%cNow with Packages Section!', 'color: #ff3366; font-size: 14px;');
         }
     </script>
+    <script>
+    // Add visit stats to terminal (if terminal exists)
+    setTimeout(() => {
+        // You can fetch stats via AJAX
+        fetch('code69visits/visits/stats.php')
+            .then(response => response.json())
+            .then(data => {
+                if (typeof addTerminalLine === 'function') {
+                    addTerminalLine(`📊 Total Visits: ${data.total_visits}`);
+                    addTerminalLine(`👥 Unique Visitors: ${data.unique_visitors}`);
+                    addTerminalLine(`📈 Today's Visits: ${data.today_visits}`);
+                }
+            })
+            .catch(err => {
+                // Silently fail if terminal doesn't exist
+            });
+    }, 3000);
+    </script>
 </body>
 </html>
+<?php
+// Close connection
+$conn->close();
+?>
