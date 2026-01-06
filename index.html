@@ -774,6 +774,88 @@
             100% { transform: translateX(100%); }
         }
 
+        /* Packages Section */
+        .packages-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .packages-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .package-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .package-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(255, 0, 51, 0.1), rgba(255, 0, 51, 0.2));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: var(--neon-red);
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 0, 51, 0.3);
+            box-shadow: 0 0 20px rgba(255, 0, 51, 0.2);
+        }
+
+        .package-features {
+            margin: 20px 0;
+        }
+
+        .package-feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            color: #ccc;
+            font-size: 0.95rem;
+        }
+
+        .package-feature i {
+            color: var(--neon-red);
+            margin-right: 12px;
+            font-size: 0.8rem;
+        }
+
+        .package-price {
+            font-size: 1.8rem;
+            font-weight: 800;
+            font-family: 'Orbitron', sans-serif;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .package-price span {
+            font-size: 1rem;
+            color: #aaa;
+            font-weight: 500;
+        }
+
+        .package-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(90deg, var(--neon-red), var(--accent-red));
+            color: white;
+            padding: 5px 15px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
         /* Projects Section */
         .projects-grid {
             display: grid;
@@ -1336,6 +1418,7 @@
                 <li><a href="#home">Home</a></li>
                 <li><a href="#about">About</a></li>
                 <li><a href="#skills">Skills</a></li>
+                <li><a href="#packages">Packages</a></li>
                 <li><a href="#projects">Projects</a></li>
                 <li><a href="#contact">Contact</a></li>
             </ul>
@@ -1355,8 +1438,8 @@
                 <h2 id="hero-subtitle">Building the future with code</h2>
                 <p id="hero-description">Specializing in futuristic web solutions, interactive applications, and cutting-edge software development. Passionate about innovation and clean architecture.</p>
                 <div class="hero-btns">
-                    <a href="#projects" class="btn btn-primary">View Projects</a>
-                    <a href="#contact" class="btn btn-secondary">Contact Me</a>
+                    <a href="#packages" class="btn btn-primary">View Packages</a>
+                    <a href="#projects" class="btn btn-secondary">View Projects</a>
                 </div>
             </div>
         </div>
@@ -1392,6 +1475,16 @@
             <h2 class="slide-left">Technical Skills</h2>
             <div class="skills-grid" id="skills-container">
                 <!-- Skills will be dynamically added here from config -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Packages Section -->
+    <section id="packages">
+        <div class="container">
+            <h2 class="slide-left">Development Packages</h2>
+            <div class="packages-grid" id="packages-container">
+                <!-- Packages will be dynamically added here from config -->
             </div>
         </div>
     </section>
@@ -1549,6 +1642,54 @@
                     "icon": "fab fa-python"
                 }
             ],
+            "packages": [
+                {
+                    "name": "Basic Website",
+                    "description": "A clean, fast, and responsive website ideal for individuals, startups, and small businesses.",
+                    "features": [
+                        "Up to 5 custom-designed pages",
+                        "Mobile, tablet & desktop responsive design",
+                        "Contact form with email integration",
+                        "Basic on-page SEO setup",
+                        "Social media links integration",
+                        "Performance optimization"
+                    ],
+                    "price": "$299",
+                    "icon": "fas fa-globe",
+                    "popular": false
+                },
+                {
+                    "name": "Web Application",
+                    "description": "A full-featured web application with authentication, database management, and admin control.",
+                    "features": [
+                        "User authentication (login & registration)",
+                        "Secure database integration",
+                        "Admin dashboard & role management",
+                        "REST API integration",
+                        "Security best practices (validation & protection)",
+                        "Deployment & hosting setup assistance",
+                        "Basic documentation"
+                    ],
+                    "price": "$899",
+                    "icon": "fas fa-laptop-code",
+                    "popular": true
+                },
+                {
+                    "name": "FiveM Scripting",
+                    "description": "Custom FiveM scripts and server resources optimized for performance and stability.",
+                    "features": [
+                        "Custom FiveM/QB/ESX compatible scripts",
+                        "Server performance optimization",
+                        "Bug fixes & script troubleshooting",
+                        "Database (MySQL) integration",
+                        "Third-party API integrations",
+                        "Post-delivery support & minor revisions"
+                    ],
+                    "price": "$499",
+                    "icon": "fas fa-gamepad",
+                    "popular": false
+                }
+            ],
             "projects": [
                 {
                     "title": "MediConnect Hub",
@@ -1567,12 +1708,6 @@
                     "description": "An AI System that can detect plants diseases from getting images by robot go plant by plant using machine learning algorithms and notify the farmer.",
                     "technologies": ["Python", "HTML", "CSS", "Firebase", "JavaScript"],
                     "icon": "fa-solid fa-leaf"
-                },
-                {
-                    "title": "Blockchain Voting Platform",
-                    "description": "Decentralized voting application with transparent ledger technology, biometric authentication, and real-time result tracking.",
-                    "technologies": ["Solidity", "Web3.js", "React", "IPFS"],
-                    "icon": "fas fa-vote-yea"
                 }
             ]
         }
@@ -1697,6 +1832,33 @@
                     </div>
                 `;
                 skillsContainer.appendChild(skillElement);
+            });
+            
+            // Render packages from config
+            const packagesContainer = document.getElementById('packages-container');
+            config.packages.forEach(pkg => {
+                const packageElement = document.createElement('div');
+                packageElement.className = 'package-card fade-in';
+                packageElement.innerHTML = `
+                    <div class="glass-card">
+                        ${pkg.popular ? '<span class="package-badge">Popular</span>' : ''}
+                        <div class="package-icon">
+                            <i class="${pkg.icon}"></i>
+                        </div>
+                        <h3>${pkg.name}</h3>
+                        <p>${pkg.description}</p>
+                        <div class="package-features">
+                            ${pkg.features.map(feature => `
+                                <div class="package-feature">
+                                    <i class="fas fa-check"></i> ${feature}
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="package-price">${pkg.price} <span>USD</span></div>
+                        <a href="#contact" class="btn btn-primary">Get Started</a>
+                    </div>
+                `;
+                packagesContainer.appendChild(packageElement);
             });
             
             // Render projects from config
@@ -2044,6 +2206,7 @@
         // Console help command (for desktop debugging)
         if (window.innerWidth >= 769) {
             console.log('%c=== PST DEV Portfolio System ===', 'color: #ff0033; font-size: 16px; font-weight: bold;');
+            console.log('%cNow with Packages Section!', 'color: #ff3366; font-size: 14px;');
         }
     </script>
 </body>
