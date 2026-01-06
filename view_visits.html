@@ -1,13 +1,51 @@
 <?php
+// Start session to access session ID if needed
+session_start();
+
+// Set the correct path to visits.json (same directory)
 $visitsFile = 'visits.json';
 
-// Read visits data
-$visits = [];
-if (file_exists($visitsFile)) {
-    $visits = json_decode(file_get_contents($visitsFile), true);
-    if (!is_array($visits)) {
+// Check if we can read the file
+if (!file_exists($visitsFile)) {
+    $visits = [];
+    $error = "visits.json file not found. Make sure it exists in the same directory.";
+} else {
+    $jsonContent = file_get_contents($visitsFile);
+    if (empty($jsonContent)) {
         $visits = [];
+        $error = "visits.json is empty.";
+    } else {
+        $visits = json_decode($jsonContent, true);
+        if (!is_array($visits)) {
+            $visits = [];
+            $error = "visits.json contains invalid JSON data.";
+        }
     }
+}
+
+// Handle CSV export
+if (isset($_GET['export']) && $_GET['export'] === 'csv' && !empty($visits)) {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="visits_export_' . date('Y-m-d_His') . '.csv"');
+    
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['#', 'Timestamp', 'IP Address', 'User Agent', 'Referrer', 'Page', 'Session ID']);
+    
+    $counter = 1;
+    foreach ($visits as $visit) {
+        fputcsv($output, [
+            $counter++,
+            $visit['timestamp'],
+            $visit['ip'],
+            $visit['user_agent'],
+            $visit['referrer'],
+            $visit['page'],
+            $visit['session_id']
+        ]);
+    }
+    
+    fclose($output);
+    exit;
 }
 
 // Reverse array to show newest first
@@ -129,6 +167,7 @@ $visits = array_reverse($visits);
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 800px;
         }
 
         th {
@@ -140,6 +179,8 @@ $visits = array_reverse($visits);
             border-bottom: 2px solid var(--neon-red);
             color: var(--neon-red);
             font-size: 1.1rem;
+            position: sticky;
+            top: 0;
         }
 
         td {
@@ -156,11 +197,11 @@ $visits = array_reverse($visits);
             color: #0af;
             font-family: 'Courier New', monospace;
             font-size: 0.9rem;
+            white-space: nowrap;
         }
 
         .user-agent {
             max-width: 300px;
-            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -168,7 +209,6 @@ $visits = array_reverse($visits);
         .referrer {
             color: #0f0;
             max-width: 200px;
-            white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -176,6 +216,13 @@ $visits = array_reverse($visits);
         .ip-address {
             font-family: 'Courier New', monospace;
             color: #ff6;
+            white-space: nowrap;
+        }
+
+        .session-id {
+            font-family: 'Courier New', monospace;
+            color: #f0f;
+            font-size: 0.9rem;
         }
 
         .controls {
@@ -250,6 +297,17 @@ $visits = array_reverse($visits);
             font-size: 1.2rem;
         }
 
+        .error-message {
+            background: rgba(255, 0, 51, 0.1);
+            border: 1px solid var(--neon-red);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            color: #ff6666;
+            font-family: 'Orbitron', sans-serif;
+        }
+
         .footer {
             text-align: center;
             margin-top: 50px;
@@ -291,6 +349,11 @@ $visits = array_reverse($visits);
             box-shadow: 0 0 15px rgba(255, 0, 51, 0.5);
         }
 
+        .clear-btn {
+            margin-left: 10px;
+            padding: 14px 20px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 80px 15px 30px;
@@ -306,6 +369,12 @@ $visits = array_reverse($visits);
             
             .search-box {
                 width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .clear-btn {
+                margin-left: 0;
+                width: 100%;
             }
             
             th, td {
@@ -316,6 +385,10 @@ $visits = array_reverse($visits);
             .user-agent, .referrer {
                 max-width: 150px;
             }
+            
+            table {
+                min-width: 600px;
+            }
         }
     </style>
 </head>
@@ -323,71 +396,103 @@ $visits = array_reverse($visits);
     <div class="container">
         <h1><i class="fas fa-chart-line"></i> VISIT ANALYTICS</h1>
         
+        <?php if (isset($error) && empty($visits)): ?>
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle"></i> <?php echo $error; ?>
+            </div>
+        <?php endif; ?>
+        
         <div class="controls">
             <div>
-                <a href="../" class="btn btn-primary">
+                <a href="./" class="btn btn-primary">
                     <i class="fas fa-arrow-left"></i> Back to Portfolio
                 </a>
-                <a href="?export=csv" class="btn btn-secondary">
-                    <i class="fas fa-download"></i> Export CSV
+                <?php if (!empty($visits)): ?>
+                    <a href="?export=csv" class="btn btn-secondary">
+                        <i class="fas fa-download"></i> Export CSV
+                    </a>
+                <?php endif; ?>
+                <a href="javascript:location.reload()" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> Refresh
                 </a>
             </div>
             
-            <input type="text" 
-                   class="search-box" 
-                   placeholder="Search visits..." 
-                   id="searchInput"
-                   onkeyup="filterTable()">
+            <div style="display: flex; align-items: center;">
+                <input type="text" 
+                       class="search-box" 
+                       placeholder="Search visits..." 
+                       id="searchInput"
+                       onkeyup="filterTable()">
+                <button class="btn btn-secondary clear-btn" onclick="clearSearch()">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
         </div>
         
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number"><?php echo count($visits); ?></div>
-                <div class="stat-label">Total Visits</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-number">
-                    <?php 
-                    $uniqueIPs = array_unique(array_column($visits, 'ip'));
-                    echo count($uniqueIPs);
-                    ?>
+        <?php if (!empty($visits)): ?>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo count($visits); ?></div>
+                    <div class="stat-label">Total Visits</div>
                 </div>
-                <div class="stat-label">Unique Visitors</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-number">
-                    <?php
-                    $today = date('Y-m-d');
-                    $todayVisits = array_filter($visits, function($visit) use ($today) {
-                        return strpos($visit['timestamp'], $today) === 0;
-                    });
-                    echo count($todayVisits);
-                    ?>
+                
+                <div class="stat-card">
+                    <div class="stat-number">
+                        <?php 
+                        $uniqueIPs = [];
+                        foreach ($visits as $visit) {
+                            $uniqueIPs[$visit['ip']] = true;
+                        }
+                        echo count($uniqueIPs);
+                        ?>
+                    </div>
+                    <div class="stat-label">Unique Visitors</div>
                 </div>
-                <div class="stat-label">Today's Visits</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-number">
-                    <?php
-                    $referrerVisits = array_filter($visits, function($visit) {
-                        return $visit['referrer'] !== 'Direct';
-                    });
-                    echo count($referrerVisits);
-                    ?>
+                
+                <div class="stat-card">
+                    <div class="stat-number">
+                        <?php
+                        $today = date('Y-m-d');
+                        $todayVisits = 0;
+                        foreach ($visits as $visit) {
+                            if (strpos($visit['timestamp'], $today) === 0) {
+                                $todayVisits++;
+                            }
+                        }
+                        echo $todayVisits;
+                        ?>
+                    </div>
+                    <div class="stat-label">Today's Visits</div>
                 </div>
-                <div class="stat-label">From Referrers</div>
+                
+                <div class="stat-card">
+                    <div class="stat-number">
+                        <?php
+                        $referrerVisits = 0;
+                        foreach ($visits as $visit) {
+                            if ($visit['referrer'] !== 'Direct' && !empty($visit['referrer'])) {
+                                $referrerVisits++;
+                            }
+                        }
+                        echo $referrerVisits;
+                        ?>
+                    </div>
+                    <div class="stat-label">From Referrers</div>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
         
         <div class="visits-table-container">
             <?php if (empty($visits)): ?>
                 <div class="no-data">
                     <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px; color: #444;"></i>
                     <p>No visit data available yet.</p>
-                    <p>Visit data will appear here once visitors come to your portfolio.</p>
+                    <p>Visit the main portfolio page to generate visit logs.</p>
+                    <?php if (isset($error)): ?>
+                        <p style="color: #ff6666; margin-top: 10px;">
+                            <i class="fas fa-exclamation-circle"></i> <?php echo $error; ?>
+                        </p>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
                 <table id="visitsTable">
@@ -398,22 +503,35 @@ $visits = array_reverse($visits);
                             <th>IP Address</th>
                             <th>User Agent</th>
                             <th>Referrer</th>
-                            <th>Session</th>
+                            <th>Page</th>
+                            <th>Session ID</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($visits as $index => $visit): ?>
+                        <?php 
+                        $counter = 1;
+                        foreach ($visits as $visit): 
+                        ?>
                             <tr>
-                                <td><?php echo $index + 1; ?></td>
+                                <td><?php echo $counter++; ?></td>
                                 <td class="timestamp"><?php echo htmlspecialchars($visit['timestamp']); ?></td>
                                 <td class="ip-address"><?php echo htmlspecialchars($visit['ip']); ?></td>
                                 <td class="user-agent" title="<?php echo htmlspecialchars($visit['user_agent']); ?>">
-                                    <?php echo htmlspecialchars(substr($visit['user_agent'], 0, 50) . (strlen($visit['user_agent']) > 50 ? '...' : '')); ?>
+                                    <?php 
+                                    $ua = htmlspecialchars($visit['user_agent']);
+                                    echo strlen($ua) > 50 ? substr($ua, 0, 50) . '...' : $ua;
+                                    ?>
                                 </td>
                                 <td class="referrer" title="<?php echo htmlspecialchars($visit['referrer']); ?>">
-                                    <?php echo htmlspecialchars(substr($visit['referrer'], 0, 30) . (strlen($visit['referrer']) > 30 ? '...' : '')); ?>
+                                    <?php 
+                                    $ref = htmlspecialchars($visit['referrer']);
+                                    echo strlen($ref) > 30 ? substr($ref, 0, 30) . '...' : $ref;
+                                    ?>
                                 </td>
-                                <td><?php echo substr($visit['session_id'], 0, 8) . '...'; ?></td>
+                                <td><?php echo htmlspecialchars($visit['page']); ?></td>
+                                <td class="session-id" title="<?php echo htmlspecialchars($visit['session_id']); ?>">
+                                    <?php echo substr($visit['session_id'], 0, 12) . '...'; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -426,6 +544,10 @@ $visits = array_reverse($visits);
         <div class="footer">
             <p>© 2026 PST DEV Visit Analytics | Last updated: <?php echo date('Y-m-d H:i:s'); ?></p>
             <p>Data is stored locally and automatically managed (keeps last 1000 visits)</p>
+            <p style="font-size: 0.8rem; opacity: 0.7; margin-top: 10px;">
+                <i class="fas fa-user-circle"></i> Current session: <?php echo session_id(); ?>
+                | <i class="fas fa-server"></i> File: <?php echo realpath($visitsFile); ?>
+            </p>
         </div>
     </div>
 
@@ -435,6 +557,8 @@ $visits = array_reverse($visits);
             const input = document.getElementById('searchInput');
             const filter = input.value.toLowerCase();
             const table = document.getElementById('visitsTable');
+            if (!table) return;
+            
             const tr = table.getElementsByTagName('tr');
             
             for (let i = 1; i < tr.length; i++) {
@@ -444,7 +568,7 @@ $visits = array_reverse($visits);
                 for (let j = 0; j < td.length; j++) {
                     if (td[j]) {
                         const textValue = td[j].textContent || td[j].innerText;
-                        if (textValue.toLowerCase().indexOf(filter) > -1) {
+                        if (textValue.toLowerCase().includes(filter)) {
                             found = true;
                             break;
                         }
@@ -457,6 +581,14 @@ $visits = array_reverse($visits);
                     tr[i].style.display = 'none';
                 }
             }
+            
+            // Update pagination after filtering
+            setupPagination();
+        }
+        
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            filterTable();
         }
         
         // Pagination
@@ -467,15 +599,20 @@ $visits = array_reverse($visits);
             const table = document.getElementById('visitsTable');
             if (!table) return;
             
-            const rows = table.tBodies[0].rows;
-            const pageCount = Math.ceil(rows.length / rowsPerPage);
+            // Get visible rows only (after filtering)
+            const allRows = Array.from(table.tBodies[0].rows);
+            const visibleRows = allRows.filter(row => row.style.display !== 'none');
+            
+            const pageCount = Math.ceil(visibleRows.length / rowsPerPage);
             const pagination = document.getElementById('pagination');
             
             if (pageCount <= 1) {
                 pagination.style.display = 'none';
+                showAllRows(); // Show all if only one page
                 return;
             }
             
+            pagination.style.display = 'flex';
             pagination.innerHTML = '';
             
             // Previous button
@@ -485,11 +622,19 @@ $visits = array_reverse($visits);
             prevBtn.onclick = () => changePage(currentPage - 1);
             pagination.appendChild(prevBtn);
             
-            // Page buttons
-            for (let i = 1; i <= pageCount; i++) {
+            // Show limited page numbers
+            const maxPages = 7;
+            let startPage = Math.max(1, currentPage - 3);
+            let endPage = Math.min(pageCount, startPage + maxPages - 1);
+            
+            if (endPage - startPage + 1 < maxPages) {
+                startPage = Math.max(1, endPage - maxPages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
                 const pageBtn = document.createElement('div');
                 pageBtn.className = 'page-btn';
-                if (i === 1) pageBtn.classList.add('active');
+                if (i === currentPage) pageBtn.classList.add('active');
                 pageBtn.textContent = i;
                 pageBtn.onclick = () => changePage(i);
                 pagination.appendChild(pageBtn);
@@ -502,15 +647,27 @@ $visits = array_reverse($visits);
             nextBtn.onclick = () => changePage(currentPage + 1);
             pagination.appendChild(nextBtn);
             
-            showPage(1);
+            showPage(currentPage);
+        }
+        
+        function showAllRows() {
+            const table = document.getElementById('visitsTable');
+            if (!table) return;
+            
+            const rows = table.tBodies[0].rows;
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].style.display = '';
+            }
         }
         
         function changePage(page) {
             const table = document.getElementById('visitsTable');
             if (!table) return;
             
-            const rows = table.tBodies[0].rows;
-            const pageCount = Math.ceil(rows.length / rowsPerPage);
+            // Get visible rows only
+            const allRows = Array.from(table.tBodies[0].rows);
+            const visibleRows = allRows.filter(row => row.style.display !== 'none');
+            const pageCount = Math.ceil(visibleRows.length / rowsPerPage);
             
             if (page < 1 || page > pageCount) return;
             
@@ -523,18 +680,28 @@ $visits = array_reverse($visits);
             const table = document.getElementById('visitsTable');
             if (!table) return;
             
-            const rows = table.tBodies[0].rows;
+            // Get visible rows only
+            const allRows = Array.from(table.tBodies[0].rows);
+            const visibleRows = allRows.filter(row => row.style.display !== 'none');
+            
             const start = (page - 1) * rowsPerPage;
             const end = start + rowsPerPage;
             
-            for (let i = 0; i < rows.length; i++) {
-                rows[i].style.display = i >= start && i < end ? '' : 'none';
+            // Hide all rows first
+            allRows.forEach(row => {
+                row.style.display = 'none';
+            });
+            
+            // Show only rows for current page
+            for (let i = start; i < Math.min(end, visibleRows.length); i++) {
+                visibleRows[i].style.display = '';
             }
         }
         
         function updatePaginationButtons() {
             const pageBtns = document.querySelectorAll('#pagination .page-btn');
             pageBtns.forEach((btn, index) => {
+                // Skip first and last buttons (prev/next)
                 if (index > 0 && index < pageBtns.length - 1) {
                     const pageNum = parseInt(btn.textContent);
                     btn.classList.toggle('active', pageNum === currentPage);
@@ -542,15 +709,32 @@ $visits = array_reverse($visits);
             });
         }
         
-        // Initialize pagination
+        // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             setupPagination();
+            
+            // Auto-refresh every 60 seconds (optional)
+            setInterval(() => {
+                // Only refresh if user is not interacting with the table
+                if (!document.querySelector('#searchInput:focus')) {
+                    location.reload();
+                }
+            }, 60000);
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl+F to focus search
+                if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+                // Escape to clear search
+                if (e.key === 'Escape') {
+                    clearSearch();
+                    document.getElementById('searchInput').blur();
+                }
+            });
         });
-        
-        // Auto-refresh every 30 seconds
-        setInterval(() => {
-            location.reload();
-        }, 30000);
     </script>
 </body>
 </html>

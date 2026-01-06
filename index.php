@@ -1,45 +1,61 @@
 <?php
-// Visit tracking system
+// Start session first
+session_start();
+
+// Visit tracking system - files are in same directory now
 $visitsFile = 'visits.json';
 
-// Ensure directory exists
-if (!file_exists(dirname($visitsFile))) {
-    mkdir(dirname($visitsFile), 0777, true);
+// Ensure visits.json exists
+if (!file_exists($visitsFile)) {
+    file_put_contents($visitsFile, '[]');
 }
 
-// Read existing visits
-$visits = [];
-if (file_exists($visitsFile)) {
-    $visits = json_decode(file_get_contents($visitsFile), true);
-    if (!is_array($visits)) {
-        $visits = [];
+// Only log visit if not already logged in this session
+if (!isset($_SESSION['visit_logged'])) {
+    // Read existing visits
+    $visits = [];
+    if (file_exists($visitsFile)) {
+        $jsonContent = file_get_contents($visitsFile);
+        if (!empty($jsonContent)) {
+            $visits = json_decode($jsonContent, true);
+        }
+        if (!is_array($visits)) {
+            $visits = [];
+        }
     }
+
+    // Collect visitor data
+    $visitData = [
+        'timestamp' => date('Y-m-d H:i:s'),
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
+        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',
+        'referrer' => $_SERVER['HTTP_REFERER'] ?? 'Direct',
+        'page' => basename($_SERVER['PHP_SELF']),
+        'session_id' => session_id()
+    ];
+
+    // Generate session ID if not exists
+    if (empty($visitData['session_id'])) {
+        $visitData['session_id'] = bin2hex(random_bytes(8));
+    }
+
+    // Add to visits array
+    $visits[] = $visitData;
+
+    // Keep only last 1000 visits
+    if (count($visits) > 1000) {
+        $visits = array_slice($visits, -1000);
+    }
+
+    // Save to file
+    file_put_contents($visitsFile, json_encode($visits, JSON_PRETTY_PRINT));
+
+    // Mark as visited in session
+    $_SESSION['visit_logged'] = true;
+    
+    // Debug log (optional - remove in production)
+    // error_log("Visit logged: " . $visitData['ip'] . " at " . $visitData['timestamp']);
 }
-
-// Collect visitor data
-$visitData = [
-    'timestamp' => date('Y-m-d H:i:s'),
-    'ip' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
-    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown',
-    'referrer' => $_SERVER['HTTP_REFERER'] ?? 'Direct',
-    'page' => basename($_SERVER['PHP_SELF']),
-    'session_id' => session_id() ?? bin2hex(random_bytes(8))
-];
-
-// Add to visits array
-$visits[] = $visitData;
-
-// Keep only last 1000 visits
-if (count($visits) > 1000) {
-    $visits = array_slice($visits, -1000);
-}
-
-// Save to file
-file_put_contents($visitsFile, json_encode($visits, JSON_PRETTY_PRINT));
-
-// Set as visited in session to prevent multiple logs per session
-session_start();
-$_SESSION['visit_logged'] = true;
 ?>
 <!DOCTYPE html>
 <html lang="en">
