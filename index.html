@@ -1,21 +1,4 @@
-<?php
-// Start PHP at the top
-if (file_exists('config.php')) {
-    require_once 'config.php';
-    
-    // Only log visits if not on Netlify build
-    if (!isset($_SERVER['NETLIFY']) && !isset($_ENV['NETLIFY'])) {
-        logVisit($conn ?? null);
-    }
-}
-
-// Get stats
-$stats = getVisitStats($conn ?? null);
-$total_visits = $stats['total_visits'] ?? 0;
-$today_visits = $stats['today_visits'] ?? 0;
-?>
 <!DOCTYPE html>
-<!-- test -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1393,53 +1376,9 @@ $today_visits = $stats['today_visits'] ?? 0;
             align-items: center;
             padding-right: 40px;
         }
-
-        .visit-counter-badge {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(255, 0, 51, 0.2);
-            border: 1px solid rgba(255, 0, 51, 0.3);
-            color: var(--neon-red);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-family: 'Orbitron', sans-serif;
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .visit-counter-badge:hover {
-            background: rgba(255, 0, 51, 0.3);
-            transform: translateY(-3px);
-        }
-
-        @media (max-width: 768px) {
-            .visit-counter-badge {
-                bottom: 10px;
-                right: 10px;
-                font-size: 0.8rem;
-                padding: 6px 12px;
-            }
-        }
     </style>
 </head>
 <body>
-    <!-- visit counter -->
-    <div class="visit-counter" style="display: none;">
-        <?php
-        $total_visits = getTotalVisits($conn);
-        $today_visits = getTodayVisits($conn);
-        echo "Total: $total_visits | Today: $today_visits";
-        ?>
-    </div>
-
     <!-- Custom Cursor (Desktop Only) -->
     <div class="cursor-dot" data-cursor-dot></div>
     <div class="cursor-outline" data-cursor-outline></div>
@@ -1644,12 +1583,6 @@ $today_visits = $stats['today_visits'] ?? 0;
             </div>
         </div>
     </footer>
-
-    <!-- visit conunter -->
-    <div class="visit-counter-badge" onclick="window.location.href='code69visits/visits/visits.php'">
-        <i class="fas fa-eye"></i>
-        <span><?php echo number_format($total_visits); ?> visits</span>
-    </div>
 
     <!-- Configuration Data -->
     <script id="config" type="application/json">
@@ -2279,37 +2212,5 @@ $today_visits = $stats['today_visits'] ?? 0;
             console.log('%cNow with Packages Section!', 'color: #ff3366; font-size: 14px;');
         }
     </script>
-
-    <!-- visitor counter -->
-    <script>
-    // Add visit stats to terminal (if terminal exists)
-    setTimeout(() => {
-        // You can fetch stats via AJAX
-        fetch('code69visits/visits/stats.php')
-            .then(response => response.json())
-            .then(data => {
-                if (typeof addTerminalLine === 'function') {
-                    addTerminalLine(`📊 Total Visits: ${data.total_visits}`);
-                    addTerminalLine(`👥 Unique Visitors: ${data.unique_visitors}`);
-                    addTerminalLine(`📈 Today's Visits: ${data.today_visits}`);
-                }
-            })
-            .catch(err => {
-                // Silently fail if terminal doesn't exist
-            });
-    }, 3000);
-
-    setTimeout(() => {
-        if (typeof addTerminalLine === 'function') {
-            addTerminalLine(`📊 Total Portfolio Visits: <?php echo number_format($total_visits); ?>`);
-            addTerminalLine(`📈 Today's Visits: <?php echo number_format($today_visits); ?>`);
-            addTerminalLine(`🔗 View analytics: /code69visits/visits/visits.php`);
-        }
-    }, 4000);
-    </script>
 </body>
 </html>
-<?php
-// Close connection
-$conn->close();
-?>
