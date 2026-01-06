@@ -1,14 +1,18 @@
 <?php
-// Start session if not started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Start PHP at the top
+if (file_exists('config.php')) {
+    require_once 'config.php';
+    
+    // Only log visits if not on Netlify build
+    if (!isset($_SERVER['NETLIFY']) && !isset($_ENV['NETLIFY'])) {
+        logVisit($conn ?? null);
+    }
 }
 
-// Include configuration
-require_once 'config.php';
-
-// Log this visit
-logVisit($conn);
+// Get stats
+$stats = getVisitStats($conn ?? null);
+$total_visits = $stats['total_visits'] ?? 0;
+$today_visits = $stats['today_visits'] ?? 0;
 ?>
 <!DOCTYPE html>
 <!-- test -->
@@ -1389,6 +1393,41 @@ logVisit($conn);
             align-items: center;
             padding-right: 40px;
         }
+
+        .visit-counter-badge {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 0, 51, 0.2);
+            border: 1px solid rgba(255, 0, 51, 0.3);
+            color: var(--neon-red);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-family: 'Orbitron', sans-serif;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .visit-counter-badge:hover {
+            background: rgba(255, 0, 51, 0.3);
+            transform: translateY(-3px);
+        }
+
+        @media (max-width: 768px) {
+            .visit-counter-badge {
+                bottom: 10px;
+                right: 10px;
+                font-size: 0.8rem;
+                padding: 6px 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1605,6 +1644,12 @@ logVisit($conn);
             </div>
         </div>
     </footer>
+
+    <!-- visit conunter -->
+    <div class="visit-counter-badge" onclick="window.location.href='code69visits/visits/visits.php'">
+        <i class="fas fa-eye"></i>
+        <span><?php echo number_format($total_visits); ?> visits</span>
+    </div>
 
     <!-- Configuration Data -->
     <script id="config" type="application/json">
@@ -2234,6 +2279,8 @@ logVisit($conn);
             console.log('%cNow with Packages Section!', 'color: #ff3366; font-size: 14px;');
         }
     </script>
+
+    <!-- visitor counter -->
     <script>
     // Add visit stats to terminal (if terminal exists)
     setTimeout(() => {
@@ -2251,6 +2298,14 @@ logVisit($conn);
                 // Silently fail if terminal doesn't exist
             });
     }, 3000);
+
+    setTimeout(() => {
+        if (typeof addTerminalLine === 'function') {
+            addTerminalLine(`📊 Total Portfolio Visits: <?php echo number_format($total_visits); ?>`);
+            addTerminalLine(`📈 Today's Visits: <?php echo number_format($today_visits); ?>`);
+            addTerminalLine(`🔗 View analytics: /code69visits/visits/visits.php`);
+        }
+    }, 4000);
     </script>
 </body>
 </html>
